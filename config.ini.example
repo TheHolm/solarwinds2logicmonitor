@@ -1,0 +1,30 @@
+# Example config (ini style)
+[Solarwinds]
+URL = https://monitor3.example.com.au:17778
+APIUser= SolawindsAPIUserName
+APIKey= SecretAPIKeyfromSolawinds
+
+
+
+# hosts will be placed  to logic monitor tree based on Node Custom Properties in solarwinds
+# as example host with properties "CustomerName"=A, "DeviceType" =B will be imported to LM folder Root/A/B
+Level1CustomProperty = CustomerName
+Level1Default = "Unknown"
+Level2CustomProperty = DeviceType
+Level2Default = "."  # AKA  put it to parent folder.
+
+# Custom Properties to import
+CustomPropertyImportList=["Alert_Customer","Alert_HelpDesk","Alert_NOC""]
+
+[LogicMonitor]
+company = 'COMPANY_NAME'
+access_id = 'API_ACCESS_ID'
+access_key = 'API_ACCESS_KEY'
+
+RootPath = "SolarwindsImport"
+
+[FileTree]
+# where to put files with devices definition
+path="dev-tree"
+# try to use .common file to store SNMP parameters if they are shared.
+aggregate-credentials = Yes
