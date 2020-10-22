@@ -1,6 +1,6 @@
 # Example config (ini style)
 [Solarwinds]
-URL = https://monitor3.example.com.au:17778
+URL = https://solarwinds.example.com.au:17778
 APIUser= SolawindsAPIUserName
 APIKey= SecretAPIKeyfromSolawinds
 
@@ -25,6 +25,6 @@ RootPath = "SolarwindsImport"
 
 [FileTree]
 # where to put files with devices definition
-path="dev-tree"
+path="dev-tree" # not implemented
 # try to use .common file to store SNMP parameters if they are shared.
-aggregate-credentials = Yes
+aggregate-credentials = Yes # Not implemented. 
