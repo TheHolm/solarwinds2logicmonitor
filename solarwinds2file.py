@@ -9,7 +9,7 @@ import solarwinds
 
 pp = pprint.PrettyPrinter(indent=2)
 
-config = configparser.ConfigParser()
+config = configparser.ConfigParser(interpolation=None)
 
 config['Solarwinds'] = {}
 config['LogicMonitor'] = {}
