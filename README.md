@@ -3,6 +3,14 @@ Simple tool to move nodes from Solarwinds to LogicMonitor
 ## File tree structure
 TBA
 
-## solarwinds2file.py <br>
+## solarwinds2file.py
 Quick and dirty code to import all nodes from solarwinds to tree like file structure. Should be used only once during initial import.
 Controlled by "[solarwinds]" section of config.ini
+
+## file2logicmonitor
+Create/update nodes in LogicMonitor based on file tree.
+
+# FAQ
+
+Q. Why custom code for LM? There is Uses [logicmonitor_sdk](https://pypi.org/project/logicmonitor-sdk/) package to access LM.
+A. I wish that package works. But unfortunately it is not.
