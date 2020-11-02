@@ -11,10 +11,6 @@ pp = pprint.PrettyPrinter(indent=2)
 
 config = configparser.ConfigParser(interpolation=None)
 
-config['Solarwinds'] = {}
-config['LogicMonitor'] = {}
-config['FileTree'] = {}
-
 config.read("config.ini")
 
 try:
@@ -42,6 +38,11 @@ except KeyError as E:
     print("Level1CustomProperty,Level1CustomProperty need to be defined in [Solarwinds] secton of config.ini\n", E)
     quit()
 
+try:
+    FileBackendPath = str(json.loads(config['FileTreeBackend']['rootpath']))
+except KeyError as E:
+    print("rootpath need to be defined in [FileTreeBackend] secton of config.ini\n", E)
+    quit()
 
 generic_fields = {"Caption": None,
                   "IPAddress": 'IPv4Address',
@@ -173,25 +174,19 @@ for Level1 in device_tree.keys():
                 if item in SNMPv3_fields.keys():
                     if SNMPv3_fields[item] is not None:
                         node_config['SNMPv3'][SNMPv3_fields[item]] = str(node_data[item])
-            if NodeName == 'Montessori_burwoodvoice_adsl ':
-                pp.pprint(node_data)
-                pp.pprint(generic_fields)
-                pp.pprint(custom_properties)
-                pp.pprint(SNMPv2_fields)
-                pp.pprint(SNMPv3_fields)
             # finally writing ini file to disk
-            file_path = os.path.join("./device-tree/", str(Level1), str(Level2), str(NodeName.replace('/', '-')) + '.ini')
+            file_path = os.path.join(FileBackendPath, str(Level1), str(Level2), str(NodeName.replace('/', '-')) + '.ini')
             # print("Trying to write ", file_path)
             try:
                 with open(file_path, 'w') as configfile:
                     node_config.write(configfile)
             except FileNotFoundError:
-                if not os.path.isdir(os.path.join("./device-tree/", str(Level1))):
-                    os.mkdir(os.path.join("./device-tree/", str(Level1)))
-                    print("Created :", os.path.join("./device-tree/", str(Level1)))
-                if not os.path.isdir(os.path.join("./device-tree/", str(Level1), str(Level2))):
-                    os.mkdir(os.path.join("./device-tree/", str(Level1), str(Level2)))
-                    print("Created :", os.path.join("./device-tree/", str(Level1), str(Level2)))
+                if not os.path.isdir(os.path.join(FileBackendPath, str(Level1))):
+                    os.mkdir(os.path.join(FileBackendPath, str(Level1)))
+                    print("Created :", os.path.join(FileBackendPath, str(Level1)))
+                if not os.path.isdir(os.path.join(FileBackendPath, str(Level1), str(Level2))):
+                    os.mkdir(os.path.join(FileBackendPath, str(Level1), str(Level2)))
+                    print("Created :", os.path.join(FileBackendPath, str(Level1), str(Level2)))
             finally:
                 with open(file_path, 'w') as configfile:
                     node_config.write(configfile)

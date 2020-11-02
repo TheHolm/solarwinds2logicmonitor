@@ -21,10 +21,10 @@ company = 'COMPANY_NAME'
 access_id = 'API_ACCESS_ID'
 access_key = 'API_ACCESS_KEY'
 
-RootPath = "SolarwindsImport"
+RootPath = "SolarwindsImport"  # no leading or trailing / !!!
 
-[FileTree]
+[FileTreeBackend]
 # where to put files with devices definition
-path="dev-tree" # not implemented
+path="/tmp/file-tree"
 # try to use .common file to store SNMP parameters if they are shared.
-aggregate-credentials = Yes # Not implemented. 
+aggregate-credentials = Yes # Not implemented.
