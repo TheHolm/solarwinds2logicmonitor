@@ -53,6 +53,17 @@ class LM_DeviceGroup:
         __header_l2__ = "Data was synced with backend: " + ('Never' if self.BackendSync_Timestamp == 0 else (str(time.time() - self.BackendSync_Timestamp) + ' seconds ago')) + "\n"
         return(__header_l1__ + __header_l2__ + 'Data:\n' + json.dumps(self.data, indent=4))
 
+    def sync2LM(self):
+        pass
+
+    def sync2backend(self):
+        pass
+
+    def sync(self):
+        ''' Sync to backend and LM '''
+        self.sync2backend()
+        self.sync2LM()
+
 
 if __name__ == '__main__':
     quit()
