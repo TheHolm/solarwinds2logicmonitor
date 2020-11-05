@@ -8,10 +8,9 @@ import hmac
 
 import json
 
-import logicmonitor
+import lm_backend
 
-
-class LM_Session:
+class API_Session:
 
     def __init__(self, AccessId, AccessKey, Company):
         ''' does not do much , just store Auth data in variables and tests that they a valig by getting some node data '''
@@ -32,16 +31,16 @@ class LM_Session:
 #        adapter = TlsAdapter(ssl.OP_NO_TLSv1 | ssl.OP_NO_TLSv1_3)
 
         # Check is account works and have NodeMangemt Rights.
-        result = self.call_API('GET', '/device/devices', params={'size': 1})
+        result = self.__call_API__('GET', '/device/devices', params={'size': 1})
         if result['status'] != 200:
-            raise logicmonitor.LM_Session_Error(str(result))
+            raise lm_backend.LM_Session_Error(str(result))
 
-    def call_API(self, httpMethod, resourcePath, payload='', params='', session_timeout=5):
+    def __call_API__(self, httpMethod, resourcePath, payload='', params='', session_timeout=5):
         ''' Make a call to LM API endpoint returns json'''
         ''' payload, params - can be and should be a dicitionary '''
 
         if httpMethod not in ('GET', 'POST', 'PATCH', 'DELETE'):
-            raise logicmonitor.LM_Session_Error("Only 'GET', 'PUT', 'PATCH' requests are supported")
+            raise lm_backend.LM_Session_Error("Only 'GET', 'PUT', 'PATCH' requests are supported")
 
         if not isinstance(payload, str):
             payload = json.dumps(payload)
@@ -61,26 +60,26 @@ class LM_Session:
         try:
             self.response = self.SessionId.request(httpMethod, self.baseURL+resourcePath, params=params, data=payload, headers=headers, timeout=session_timeout)
         except urllib3.exceptions.ReadTimeoutError as e:
-            raise logicmonitor.LM_Session_Database_Error('Connection timeout' + str(e))
+            raise lm_backend.LM_Session_Database_Error('Connection timeout' + str(e))
         else:
             self.response.raise_for_status()
         return(self.response.json())
 
     def get(self, resourcePath, payload='', params='', session_timeout=10):
         ''' Simple wrper for call_API, saves you affor to passing GET to it'''
-        return(self.call_API('GET', resourcePath, payload=payload, params=params, session_timeout=session_timeout))
+        return(self.__call_API__('GET', resourcePath, payload=payload, params=params, session_timeout=session_timeout))
 
     def post(self, resourcePath, payload='', params='', session_timeout=10):
-        ''' Simple wrper for call_API, saves you affor to passing POST to it'''
-        return(self.call_API('POST', resourcePath, payload=payload, params=params, session_timeout=session_timeout))
+        ''' Simple wrper for __call_API__, saves you affor to passing POST to it'''
+        return(self.__call_API__('POST', resourcePath, payload=payload, params=params, session_timeout=session_timeout))
 
     def patch(self, resourcePath, payload='', params='', session_timeout=10):
-        ''' Simple wrper for call_API, saves you affor to passing PATCH to it'''
-        return(self.call_API('PATCH', resourcePath, payload=payload, params=params, session_timeout=session_timeout))
+        ''' Simple wrper for __call_API__, saves you affor to passing PATCH to it'''
+        return(self.__call_API__('PATCH', resourcePath, payload=payload, params=params, session_timeout=session_timeout))
 
     def delete(self, resourcePath, payload='', params='', session_timeout=10):
-        ''' Simple wrper for call_API, saves you affor to passing DELETE to it'''
-        return(self.call_API('DELETE', resourcePath, payload=payload, params=params, session_timeout=session_timeout))
+        ''' Simple wrper for __call_API__, saves you affor to passing DELETE to it'''
+        return(self.__call_API__('DELETE', resourcePath, payload=payload, params=params, session_timeout=session_timeout))
 
 
 if __name__ == '__main__':

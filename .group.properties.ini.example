@@ -1,0 +1,12 @@
+[properties]
+id = 1
+parentId = 2
+defaultCollectorId = 0
+description = "something"
+fullPath = "Customers"
+name = "Customers"
+
+[customProperties]
+
+
+[extra]
