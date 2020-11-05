@@ -175,7 +175,7 @@ for Level1 in device_tree.keys():
                     if SNMPv3_fields[item] is not None:
                         node_config['SNMPv3'][SNMPv3_fields[item]] = str(node_data[item])
             # finally writing ini file to disk
-            file_path = os.path.join(FileBackendPath, str(Level1), str(Level2), str(NodeName.replace('/', '-')) + '.ini')
+            file_path = os.path.join(FileBackendPath, str(Level1), "Network", str(Level2), str(NodeName.replace('/', '-')) + '.ini')
             # print("Trying to write ", file_path)
             try:
                 with open(file_path, 'w') as configfile:
@@ -184,9 +184,12 @@ for Level1 in device_tree.keys():
                 if not os.path.isdir(os.path.join(FileBackendPath, str(Level1))):
                     os.mkdir(os.path.join(FileBackendPath, str(Level1)))
                     print("Created :", os.path.join(FileBackendPath, str(Level1)))
-                if not os.path.isdir(os.path.join(FileBackendPath, str(Level1), str(Level2))):
-                    os.mkdir(os.path.join(FileBackendPath, str(Level1), str(Level2)))
-                    print("Created :", os.path.join(FileBackendPath, str(Level1), str(Level2)))
+                if not os.path.isdir(os.path.join(FileBackendPath, str(Level1), "Network")):
+                    os.mkdir(os.path.join(FileBackendPath, str(Level1), "Network"))
+                    print("Created :", os.path.join(FileBackendPath, str(Level1), "Network"))
+                if not os.path.isdir(os.path.join(FileBackendPath, str(Level1), "Network", str(Level2))):
+                    os.mkdir(os.path.join(FileBackendPath, str(Level1), "Network", str(Level2)))
+                    print("Created :", os.path.join(FileBackendPath, str(Level1), "Network", str(Level2)))
             finally:
                 with open(file_path, 'w') as configfile:
                     node_config.write(configfile)
