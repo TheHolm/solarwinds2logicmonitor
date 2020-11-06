@@ -19,13 +19,8 @@ class DeviceGroup:
                      'name')
 
     def __init__(self, id=None, fullPath="", data={}):
-        '''  Just populate file structure'''
+        '''  Just populate file structure. id and fullPath has priority over values in data'''
         # Init vars
-        self.id = id
-        self.fullPath = fullPath
-        self.LMSync_Timestamp = 0
-        self.BackendSync_Timestamp = 0
-        self.Update_Temestamp = time.time()
         self.data = {}
         for key_id in DeviceGroup.keys_to_store:
             self.data[key_id] = None
@@ -34,11 +29,36 @@ class DeviceGroup:
             if key_id in DeviceGroup.keys_to_store:
                 self.data[key_id] = data[key_id]
 
+        if id is not None:
+            self.data['id'] = id
+        if fullPath != "":
+            self.data['fullPath'] = fullPath
+
+        if self.data['id'] is None and self.data['fullPath'] == "":
+            raise DeviceGroup_Error('"Id" or "fulPath" have to be provided as paramiters or as part of "data"')
+            quit(1)
+
+        self.data['LMSync_Timestamp'] = 0
+        self.data['FSSync_Timestamp'] = 0
+        self.data['Update_Temestamp'] = time.time()
+
+    def clone(self, source):
+        '''just copied data to self from other instance of same class'''
+        if issubclass(source.__class__, DeviceGroup):
+            self.data = source.data
+        else:
+            raise DeviceGroup_Error('Expected subclass of <class DeviceGroup>, got {}.'.format(type(source)))
+
     def __str__(self):
         ''' human readable serialiation '''
-        __header_l1__ = "Data was synced with LM: " + ('Never' if self.LMSync_Timestamp == 0 else (str(time.time() - self.LMSync_Timestamp) + ' seconds ago')) + "\n"
-        __header_l2__ = "Data was synced with backend: " + ('Never' if self.BackendSync_Timestamp == 0 else (str(time.time() - self.BackendSync_Timestamp) + ' seconds ago')) + "\n"
+        __header_l1__ = "Data was synced with LM: " + ('Never' if self.data['LMSync_Timestamp'] == 0 else (str(time.time() - self.data['LMSync_Timestamp']) + ' seconds ago')) + "\n"
+        __header_l2__ = "Data was synced with file system backend: " + ('Never' if self.data['FSSync_Timestamp'] == 0 else (str(time.time() - self.data['FSSync_Timestamp']) + ' seconds ago')) + "\n"
         return(__header_l1__ + __header_l2__ + 'Data:\n' + json.dumps(self.data, indent=4))
+
+    def __eq__(self, other):
+        ''' Not implemented '''
+        raise DeviceGroup_Error(" == overload is not implemened")
+        pass
 
 
 if __name__ == '__main__':
