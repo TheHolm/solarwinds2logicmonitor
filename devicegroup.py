@@ -40,14 +40,21 @@ class DeviceGroup:
 
         self.data['LMSync_Timestamp'] = 0
         self.data['FSSync_Timestamp'] = 0
-        self.data['Update_Temestamp'] = time.time()
+        self.data['Update_Timestamp'] = int(time.time())
 
     def clone(self, source):
         '''just copied data to self from other instance of same class'''
+        # should I use deep copy instaed?
         if issubclass(source.__class__, DeviceGroup):
             self.data = source.data
         else:
             raise DeviceGroup_Error('Expected subclass of <class DeviceGroup>, got {}.'.format(type(source)))
+
+    def __update_data__(self, source):
+        '''copy data to self from source for keys in "DeviceGroup.keys_to_store" list'''
+        for key_id in source.keys():
+            if key_id in DeviceGroup.keys_to_store:
+                self.data[key_id] = source[key_id]
 
     def __str__(self):
         ''' human readable serialiation '''
