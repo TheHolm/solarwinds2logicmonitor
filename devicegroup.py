@@ -16,7 +16,9 @@ class DeviceGroup:
                      'description',
                      'extra',
                      'fullPath',
-                     'name')
+                     'name',
+                     'disableAlerting',
+                     'groupType')
 
     def __init__(self, id=None, fullPath="", data={}):
         '''  Just populate file structure. id and fullPath has priority over values in data'''

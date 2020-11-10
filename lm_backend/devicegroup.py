@@ -7,6 +7,36 @@ import devicegroup
 
 class DeviceGroup(devicegroup.DeviceGroup):
 
+    __RO_attributes__ = frozenset((
+        'id',
+        'awsTestResult',
+        'azureTestResult',
+        'autoVisualResult',
+        'awsTestResultCode',
+        'azureTestResultCode',
+        'createdOn',
+        'appliesTo',
+        'fullPath',
+        'numOfHosts'
+        'numOfAWSDevices',
+        "numOfAzureDevices",
+        "numOfGcpDevices",
+        "numOfDirectDevices",
+        "numOfDirectSubGroups",
+        "effectiveAlertEnabled",
+        "sdtStatus",
+        "alertStatus",
+        "alertStatusPriority",  # not shure what does it do maybe not RO
+        "clusterAlertStatus",
+        "clusterAlertStatusPriority",  # not shure what does it do maybe not RO
+        "alertDisableStatus",
+        "alertingDisabledOn",  # not shure what does it do maybe not RO
+        "groupStatus",
+        "subGroups",
+        "defaultCollectorDescription",
+        "defaultCollectorGroupId"  # for some reason you can;t set it.
+    ))
+
     def __init__(self, LM_Session, id=None, fullPath=None, deviceGroup=None):
         ''' can be created ether by specifying LM group ID or fullPath, or from base class'''
         # TODO - proper handling when constructor called and deviceGroup is lm_backend.DeviceGroup class
@@ -45,15 +75,20 @@ class DeviceGroup(devicegroup.DeviceGroup):
         else:
             raise lm_backend.LM_Session_Internal_Error('Expected subclass of <class lm_backend.DeviceGroup>, got {}.'.format(type(source)))
 
-    def get(self, searchOrder=['id', 'fullPath'], raiseWhenNotFound=True):
+    def get(self, searchOrder=['id', 'fullPath', "name"], raiseWhenNotFound=True):
         ''' try to populate intance via LM API'''
-        ''' searchOrder - controls what field and in what order use to search, when found other fileds will   be updated by data from LM
+        ''' searchOrder - controls what field and in what order use to search, when found other fileds will be updated by data from LM
+            'id' - will use "self.data['id']" to match group (fastest)
+            'fullPath' - will use "self.data['fullPath']" to find group
+            'name' - will use "self.data['name']" and "self.data['parentId']" to find group
             raiseWhenNotFound if True will rise  LM_Session_Query_Error if group can't be found, if False just set data['LMSync_Timestamp'] to 0 and exit.
         '''
-        if len(searchOrder) < 1 or len(searchOrder) > 2:
-            raise lm_backend.LM_Session_Query_Error('Query error: searchOrder must contain between 1 to 2 entries', )
+        if len(searchOrder) < 1 or len(searchOrder) > 3:
+            raise lm_backend.LM_Session_Query_Error('Query error: searchOrder must contain between 1 to 3 entries', )
         for method in searchOrder:
-            if method == 'id':
+            if method == 'id' and 'id' in self.data:
+                if self.data['id'] is None:
+                    continue
                 result = self.LM_Session.get('/device/groups/' + str(self.data['id']))
                 if result['status'] == 1069 and raiseWhenNotFound:
                     raise lm_backend.LM_Session_Query_Error('The hostgroup ID ' + str(self.data['id']) + ' is not found')
@@ -67,8 +102,15 @@ class DeviceGroup(devicegroup.DeviceGroup):
                     self.data['Update_Timestamp'] = int(time.time())
                     self.data['LMSync_Timestamp'] = self.data['Update_Timestamp']
                     return
-            if method == 'fullPath':
-                result = self.LM_Session.get('/device/groups', params={'filter': 'fullPath:' + str(self.data['fullPath'])})
+            if (method == 'fullPath' and 'fullPath' in self.data) or \
+               (method == 'name' and 'name' in self.data and 'parentId' in self.data):
+                try:
+                    filter = ('fullPath:' + str(self.data['fullPath'])) if (method == 'fullPath') else \
+                        ('name:' + str(self.data['name']) + ',' + 'parentId:' + str(self.data['parentId']))
+                except TypeError:
+                    # not sure is it safe. should cach situation when some od data['xx'] are None or wrong type
+                    continue
+                result = self.LM_Session.get('/device/groups', params={'filter': filter})
                 # print(json.dumps(result, indent=4))
                 if result['status'] != 200:
                     raise lm_backend.LM_Session_Query_Error('Query error' + result['errmsg'])
@@ -77,8 +119,8 @@ class DeviceGroup(devicegroup.DeviceGroup):
                     raise lm_backend.LM_Session_Database_Error('LM API return more than 1 result in group search "' + self.data['fullPath'] + '"')
                     quit(1)
                 elif result['data']['total'] == 0:
-                    raise lm_backend.LM_Session_Database_Error('Device group "' + self.data['fullPath'] + '" was not found')
-                    quit(1)
+                    # nothing found, let's try other method
+                    continue
                 else:
                     self.__update_data__(result['data']['items'][0])
                     self.data['Update_Timestamp'] = int(time.time())
@@ -91,13 +133,34 @@ class DeviceGroup(devicegroup.DeviceGroup):
             quit(1)
 
     def put(self, raiseIfExists=True):
-        ''' Creates group in LM, based on FullPath'''
-        ''' Id field is ignored.
+        ''' Creates group in LM, based on fullPath or (parentId + name) '''
+        ''' Id is ignored. if instance have both fullPath and (parentId + name), parentID takes priority
             if raiseIfExists is True and group already exist on same path then LM_Session_Query_Error will rised
             if raiseIfExists is False and group already exist on same path then set data['LMSync_Timestamp'] to 0 and exit
             If LM API returns an error exception will be always raised.
-            After creation Read Only data get populated by second self.get() request
+            After creation Read Only data get populated
         '''
+        RW_data = {}
+        for key in self.data.keys():
+            if key not in lm_backend.DeviceGroup.__RO_attributes__:
+                RW_data[key] = self.data[key]
+
+        if set(('parentId', 'name')).issubset(set(self.data.keys())):
+            if 'fullPath' in self.data.keys():
+                del self.data['fullPath']
+            result = self.LM_Session.post('/device/groups', payload=RW_data)
+            if result['status'] != 200:
+                raise lm_backend.LM_Session_Query_Error('Query error' + result['errmsg'])
+                quit(1)
+            else:
+                self.__update_data__(result['data'])
+                self.data['Update_Timestamp'] = int(time.time())
+                self.data['LMSync_Timestamp'] = self.data['Update_Timestamp']
+        elif 'fullPath' in self.data.keys():
+            raise lm_backend.LM_Session_Query_Error("Not implemented")
+        else:
+            raise lm_backend.LM_Session_Query_Error('FullPath or (parentId + name) is requred to create roup')
+            quit(1)
 
     def patch(self, raiseWhenNotFound=True):
         ''' Update exisiting LM Group by data from instance '''
