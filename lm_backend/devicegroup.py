@@ -61,7 +61,7 @@ class DeviceGroup(devicegroup.DeviceGroup):
                 self.get(searchOrder=['id', ])
             elif fullPath is not None:
                 self.data['fullPath'] = str(fullPath)
-                self.get(searchOrder=['ullPath', ])
+                self.get(searchOrder=['fullPath', ])
             else:  # we already checked that some of paramiters are not none.
                 raise lm_backend.LM_Session_Internal_Error("This should not happen ever")
             # copying of data from LM
