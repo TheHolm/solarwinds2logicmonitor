@@ -23,8 +23,8 @@ access_key = 'API_ACCESS_KEY'
 
 RootPath = "SolarwindsImport"  # no leading or trailing / !!!
 
-[FileTreeBackend]
+[FileSystemBackend]
 # where to put files with devices definition
-path="/tmp/file-tree"
+rootpath="/tmp/file-tree"
 # try to use .common file to store SNMP parameters if they are shared.
 aggregate-credentials = Yes # Not implemented.
