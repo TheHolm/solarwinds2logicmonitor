@@ -14,3 +14,6 @@ Create/update nodes in LogicMonitor based on file tree.
 
 Q. Why custom code for LM? There is Uses [logicmonitor_sdk](https://pypi.org/project/logicmonitor-sdk/) package to access LM.
 A. I wish that package works. But unfortunately it is not.
+
+Q. Why quit(1) after raise() ? It it will never get executed.
+A. Sorry, but it just my way to mark potential exit points.
