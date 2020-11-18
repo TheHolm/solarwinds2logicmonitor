@@ -144,6 +144,19 @@ class Test_Inventory_Tree:
         assert g0.data['fullPath'] == "Users"
         print(it, g0)
 
+    def test_add_group_15(self, Inventory_Tree_Instance):
+        ''' fail trying to add root group with same name'''
+        it = Inventory_Tree_Instance
+        groupdata = {
+          "id": 1003,
+          "name": "Users",
+          "parentId": -1
+        }
+        g0 = devicegroup.DeviceGroup(data=groupdata)
+        with pytest.raises(inventory.Inventory_Query_Error):
+            it.add_group(g0)  # should fail as no parent yet.
+        print(it, g0)
+
     def test_add_group_11(self, Inventory_Tree_Instance):
         ''' Adding sub group by name and parentId'''
         it = Inventory_Tree_Instance
@@ -159,7 +172,7 @@ class Test_Inventory_Tree:
         print(it, g0)
 
     def test_add_group_12(self, Inventory_Tree_Instance):
-        ''' Adding root group by name and parentId, no updates'''
+        ''' Adding sub group by name and parentId, no updates'''
         it = Inventory_Tree_Instance
         groupdata = {
           "id": None,
@@ -172,12 +185,25 @@ class Test_Inventory_Tree:
         print(it, g0)
 
     def test_add_group_13(self, Inventory_Tree_Instance):
-        ''' fail trying to add group root group by name and non exisiting parentId '''
+        ''' fail trying to add sub group by name and non exisiting parentId '''
         it = Inventory_Tree_Instance
         groupdata = {
           "id": None,
           "name": "Just Jonh",
           "parentId": 1002
+        }
+        g0 = devicegroup.DeviceGroup(data=groupdata)
+        with pytest.raises(inventory.Inventory_Query_Error):
+            it.add_group(g0)  # should fail as no parent yet.
+        print(it, g0)
+
+    def test_add_group_14(self, Inventory_Tree_Instance):
+        ''' fail trying to add sub group with same name and parentId '''
+        it = Inventory_Tree_Instance
+        groupdata = {
+          "id": None,
+          "name": "Jonh Smith",
+          "parentId": 1001
         }
         g0 = devicegroup.DeviceGroup(data=groupdata)
         with pytest.raises(inventory.Inventory_Query_Error):

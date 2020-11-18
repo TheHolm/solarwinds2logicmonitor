@@ -58,14 +58,6 @@ class Inventory_Tree:
 
         if g_fullPath not in (None, ''):
 
-            # DB conflict checks. It should not be other group with same fullPath
-            c = self.db.cursor()
-            c.execute('SELECT fullPath FROM groups WHERE fullPath = ?', (device_group.data['fullPath'], ))
-            if c.fetchone() is not None:
-                raise inventory.Inventory_Query_Error('device_group with fullPath (' + str(device_group.data['fullPath']) + ' alredy exist in database')
-                quit(1)
-            c.close()
-
             path_list = g_fullPath.split('/')
             name_from_path = path_list[-1]
             if name_from_path == '':
@@ -140,13 +132,21 @@ class Inventory_Tree:
             if not doNotUpdate:
                 device_group.data['fullPath'] = g_fullPath
 
+        # checking for fullPath collisions
+        c = self.db.cursor()
+        c.execute('SELECT fullPath FROM groups WHERE fullPath = ?', (device_group.data['fullPath'], ))
+        if c.fetchone() is not None:
+            raise inventory.Inventory_Query_Error('device_group with fullPath (' + str(device_group.data['fullPath']) + ' alredy exist in database')
+            quit(1)
+        c.close()
+
         c = self.db.cursor()
         c.execute('INSERT INTO groups (id,parentKey, parentId, name, fullPath ) VALUES (?, ? , ? , ? , ? ) ',
                   (device_group.data['id'], parentKey, parentId, g_name, g_fullPath))
         self.tree.insert(c.lastrowid, device_group)
         c.close()
 
-    def get_group(self, ):
+    def get_group(self, fullPath, ):
         ''' returns devicegroup instance, if it can find it'''
         pass
 
@@ -164,3 +164,14 @@ class Inventory_Tree:
             ret = ret + str(tuple(r)) + "\n"
         ret = ret + "\n" + str(self.tree)
         return (ret)
+
+
+# lets test retrival
+'''['key', 'id', 'parentKey', 'parentId', 'name', 'fullPath']
+(1, 1000, -1, None, 'Customers', 'Customers')
+(2, 2000, 1, 1000, 'Horns and Hooves', 'Customers/Horns and Hooves')
+(3, None, 1, None, None, 'Customers/Horns and Hooves 2')
+(4, 1001, -1, -1, 'Users', 'Users')
+(5, None, 4, 1001, 'Jonh Smith', 'Users/Jonh Smith')
+(6, None, 4, 1001, 'Jonh Carpenter', 'Users/Jonh Carpenter')
+'''
