@@ -9,7 +9,12 @@ class Test_Inventory_Tree:
         ''' just check that init can run'''
         inventory.Inventory_Tree()
 
-    # fullPAth based adds
+    # testing fullPAth based adds
+    # DB state after running all sucsesull adds. It is not a good aproach as you can't run just single test realbely.
+    # root - (1, 1000, -1, None, 'Customers', 'Customers')
+    #               *-- (2, 2000, 1, 1000, 'Horns and Hooves', 'Customers/Horns and Hooves')
+    #               * -- (2, 2000, 1, 1000, 'Horns and Hooves', 'Customers/Horns and Hooves')
+
     def test_add_group_01(self, Inventory_Tree_Instance):
         ''' Adding root group by full path'''
         it = Inventory_Tree_Instance
@@ -119,6 +124,60 @@ class Test_Inventory_Tree:
           "id": None,
           "name": None,
           "fullPath": "Customers/Horns and Hooves",
+        }
+        g0 = devicegroup.DeviceGroup(data=groupdata)
+        with pytest.raises(inventory.Inventory_Query_Error):
+            it.add_group(g0)  # should fail as no parent yet.
+        print(it, g0)
+
+# let test adding without fullPath
+    def test_add_group_10(self, Inventory_Tree_Instance):
+        ''' Adding root group by name and parentId'''
+        it = Inventory_Tree_Instance
+        groupdata = {
+          "id": 1001,
+          "name": "Users",
+          "parentId": -1
+        }
+        g0 = devicegroup.DeviceGroup(data=groupdata)
+        it.add_group(g0)
+        assert g0.data['fullPath'] == "Users"
+        print(it, g0)
+
+    def test_add_group_11(self, Inventory_Tree_Instance):
+        ''' Adding sub group by name and parentId'''
+        it = Inventory_Tree_Instance
+        groupdata = {
+          "id": None,
+          "name": "Jonh Smith",
+          "parentId": 1001
+        }
+        g0 = devicegroup.DeviceGroup(data=groupdata)
+        it.add_group(g0)
+        assert g0.data['fullPath'] == "Users/Jonh Smith"
+        assert g0.data['parentId'] == 1001
+        print(it, g0)
+
+    def test_add_group_12(self, Inventory_Tree_Instance):
+        ''' Adding root group by name and parentId, no updates'''
+        it = Inventory_Tree_Instance
+        groupdata = {
+          "id": None,
+          "name": "Jonh Carpenter",
+          "parentId": 1001
+        }
+        g0 = devicegroup.DeviceGroup(data=groupdata)
+        it.add_group(g0, doNotUpdate=True)
+        assert g0.data['fullPath'] is None
+        print(it, g0)
+
+    def test_add_group_13(self, Inventory_Tree_Instance):
+        ''' fail trying to add group root group by name and non exisiting parentId '''
+        it = Inventory_Tree_Instance
+        groupdata = {
+          "id": None,
+          "name": "Just Jonh",
+          "parentId": 1002
         }
         g0 = devicegroup.DeviceGroup(data=groupdata)
         with pytest.raises(inventory.Inventory_Query_Error):

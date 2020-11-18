@@ -33,12 +33,10 @@ class Inventory_Tree:
         self.tree = []
         # adding root
 
-    def add_group(self, device_group, parentKey=None, doNotUpdate=False):
+    def add_group(self, device_group, doNotUpdate=False):
         '''Add a group database of type device.DeviceGroup, code will try it best to find parrents '''
-        # device_group  + parrentKey should have enogh information to locate group parent
         # fullpath - will extract group name ant try to find parrent based on rest of the path
-        # Name + parentID or parentKey. If both are Nane than parent is root.
-        # Name, id=None, parentKey=None, parentID=None, fullpath=None
+        # Name + parentID. if parentID == -1  than parent is root.
         # doNotUpdate conrols should method add missing data to "device_group" based on data in database.
         # Any conflict between data in device_group and database will raise an exception
 
@@ -49,17 +47,18 @@ class Inventory_Tree:
         g_fullPath = device_group.data['fullPath'] if device_group.data['fullPath'] != '' else None
         g_name = device_group.data['name'] if device_group.data['name'] != '' else None
 
+        # DB conflict check. It should not be other group with same id
+        if device_group.data['id'] is not None:
+            c = self.db.cursor()
+            c.execute('SELECT id FROM groups WHERE id = ?', (device_group.data['id'], ))
+            if c.fetchone() is not None:
+                raise inventory.Inventory_Query_Error('device_group with Id  (' + str(device_group.data['id']) + ' alredy exist in database')
+                quit(1)
+            c.close()
+
         if g_fullPath not in (None, ''):
 
-            # some conflict checks. It should not be other group with same id and same fullPath,
-            if device_group.data['id'] is not None:
-                c = self.db.cursor()
-                c.execute('SELECT id FROM groups WHERE id = ?', (device_group.data['id'], ))
-                if c.fetchone() is not None:
-                    raise inventory.Inventory_Query_Error('device_group with Id  (' + str(device_group.data['id']) + ' alredy exist in database')
-                    quit(1)
-                c.close()
-
+            # DB conflict checks. It should not be other group with same fullPath
             c = self.db.cursor()
             c.execute('SELECT fullPath FROM groups WHERE fullPath = ?', (device_group.data['fullPath'], ))
             if c.fetchone() is not None:
@@ -111,9 +110,40 @@ class Inventory_Tree:
                     else:
                         parentId = device_group.data['parentId']
 
+        # fullPath is not defined. Let's try to add group based on parentId and name
+        elif device_group.data['name'] in ('', None) or device_group.data['parentId'] is None:
+            raise inventory.Inventory_Query_Error('Not enogh info in device_group to find group parent, ether fullPath ot name + parentID need tobe defined')
+            quit(1)
+        else:
+            # let's find parent.
+            if device_group.data['parentId'] == -1:  # no need to sarch for parent it is a root.
+                parentKey = -1
+                parentId = -1
+                g_fullPath = device_group.data['name']
+            else:
+                c = self.db.cursor()
+                c.execute('SELECT key,fullPath FROM groups WHERE id = ? ', (device_group.data['parentId'],))
+                results = c.fetchall()
+                if len(results) < 1:
+                    # parent not found
+                    raise inventory.Inventory_Query_Error('ParentId of device_group.name (' + str(device_group.data['parentId']) + ') was not found in database')
+                    quit(1)
+                elif len(results) > 1:
+                    # multiple parents found - it seems to be database corruption
+                    raise inventory.Inventory_Internal_Error('fullPath search of parent returned multiple values. It should not be possible')
+                    quit(1)
+                else:
+                    parentKey = results[0]['key']
+                    parentId = device_group.data['parentId']
+                    g_fullPath = results[0]['fullPath'] + "/" + device_group.data['name']
+
+            if not doNotUpdate:
+                device_group.data['fullPath'] = g_fullPath
+
         c = self.db.cursor()
         c.execute('INSERT INTO groups (id,parentKey, parentId, name, fullPath ) VALUES (?, ? , ? , ? , ? ) ',
                   (device_group.data['id'], parentKey, parentId, g_name, g_fullPath))
+        self.tree.insert(c.lastrowid, device_group)
         c.close()
 
     def get_group(self, ):
@@ -132,4 +162,5 @@ class Inventory_Tree:
         c.execute('SELECT * FROM groups')
         for r in c.fetchall():
             ret = ret + str(tuple(r)) + "\n"
+        ret = ret + "\n" + str(self.tree)
         return (ret)
