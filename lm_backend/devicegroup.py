@@ -142,7 +142,7 @@ class DeviceGroup(devicegroup.DeviceGroup):
         '''
         RW_data = {}
         for key in self.data.keys():
-            if key not in lm_backend.DeviceGroup.__RO_attributes__:
+            if key not in lm_backend.DeviceGroup.__RO_attributes__ and self.data[key] is not None:
                 RW_data[key] = self.data[key]
 
         if set(('parentId', 'name')).issubset(set(self.data.keys())):
@@ -150,7 +150,7 @@ class DeviceGroup(devicegroup.DeviceGroup):
                 del self.data['fullPath']
             result = self.LM_Session.post('/device/groups', payload=RW_data)
             if result['status'] != 200:
-                raise lm_backend.LM_Session_Query_Error('Query error' + result['errmsg'])
+                raise lm_backend.LM_Session_Query_Error('Query error: ' + result['errmsg'] + ' Result: ' + str(result['status']))
                 quit(1)
             else:
                 self.__update_data__(result['data'])
