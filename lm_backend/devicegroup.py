@@ -15,7 +15,6 @@ class DeviceGroup(devicegroup.DeviceGroup):
         'awsTestResultCode',
         'azureTestResultCode',
         'createdOn',
-        'appliesTo',
         'fullPath',
         'numOfHosts'
         'numOfAWSDevices',

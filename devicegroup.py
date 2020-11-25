@@ -18,7 +18,8 @@ class DeviceGroup:
                      'fullPath',
                      'name',
                      'disableAlerting',
-                     'groupType')
+                     'groupType',
+                     )
 
     def __init__(self, id=None, fullPath="", data={}):
         '''  Just populate file structure. id and fullPath has priority over values in data'''
@@ -28,7 +29,7 @@ class DeviceGroup:
             self.data[key_id] = None
 
         for key_id in data.keys():
-            if key_id in DeviceGroup.keys_to_store:
+        #    if key_id in DeviceGroup.keys_to_store:
                 self.data[key_id] = data[key_id]
 
         if id is not None:
