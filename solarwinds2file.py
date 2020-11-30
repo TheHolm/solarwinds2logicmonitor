@@ -39,9 +39,9 @@ except KeyError as E:
     quit()
 
 try:
-    FileBackendPath = str(json.loads(config['FileTreeBackend']['rootpath']))
+    FileBackendPath = str(json.loads(config['FileSystemBackend']['rootpath']))
 except KeyError as E:
-    print("rootpath need to be defined in [FileTreeBackend] secton of config.ini\n", E)
+    print("rootpath need to be defined in [FileSystemBackend] secton of config.ini\n", E)
     quit()
 
 generic_fields = {"Caption": None,
