@@ -63,7 +63,11 @@ class API_Session:
             raise lm_backend.LM_Session_Database_Error('Connection timeout' + str(e))
         else:
             self.response.raise_for_status()
-        return(self.response.json())
+
+        response = self.response.json()
+        response['headers'] = dict(self.response.headers)
+        # know that coder above is calling for truoble as Headers not always can be represnted as dict.  But LM respones seems to be does not cause any troubles.
+        return(response)
 
     def get(self, resourcePath, payload='', params='', session_timeout=10):
         ''' Simple wrper for call_API, saves you affor to passing GET to it'''
