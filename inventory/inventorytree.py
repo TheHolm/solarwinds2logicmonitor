@@ -7,11 +7,11 @@ import inventory
 class Inventory_Tree:
 
     def __init__(self):
-        ''' Just init in-maemory database and some variables.'''
+        ''' Just init in-memory database and some variables.'''
         self.db = sqlite3.connect(':memory:')
         self.db.row_factory = sqlite3.Row
 
-        # lets init tables.
+        # lets init groups tables.
         c = self.db.cursor()
         ''' key - in DB id. It is local for DB and only stored in memory.
          id  - External group id - corresponds to on disk oor Logic monitor ids. Not same as key.
@@ -152,6 +152,13 @@ class Inventory_Tree:
 
     def del_group(self):
         pass
+
+    def update_group(self):
+        '''mostly to move group under differnt parent'''
+        pass
+
+    def _check_db_integrity_(self):
+        ''' Just to be realy caution, check DB for possible mistmatches '''
 
     def __str__(self):
         c = self.db.cursor()
