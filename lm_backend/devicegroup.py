@@ -158,15 +158,40 @@ class DeviceGroup(devicegroup.DeviceGroup):
         elif 'fullPath' in self.data.keys():
             raise lm_backend.LM_Session_Query_Error("Not implemented")
         else:
-            raise lm_backend.LM_Session_Query_Error('FullPath or (parentId + name) is requred to create roup')
+            raise lm_backend.LM_Session_Query_Error('FullPath or (parentId + name) is requred to create group')
             quit(1)
 
-    def patch(self, raiseWhenNotFound=True):
+    def patch(self, patchFields=None, raiseWhenNotFound=True):
         ''' Update exisiting LM Group by data from instance '''
         ''' Both Id and fullPath have to match data in LM, otherwise query will fail
         If LM API returns an error exception will be always raised.
         After succesful Read Only data get populated by second self.get() request
+        patchFields list of field wich need to be updated. should be list or set. If it is None, all fids will be updated.
         '''
+        ### please change this !!!!! IT is copy of code from put()
+        if patchFields is None:
+            patchFields = set(self.data.keys())
+        print(patchFields)
+        RW_data = {}
+        for key in set(self.data.keys()) & set(patchFields):  # only data from patchField are get copied.
+            if key not in lm_backend.DeviceGroup.__RO_attributes__ and self.data[key] is not None:
+                RW_data[key] = self.data[key]
+
+        if 'id' in self.data.keys():
+            print(RW_data)
+            if 'fullPath' in self.data.keys():
+                del self.data['fullPath']
+            result = self.LM_Session.patch('/device/groups/' + str(self.data['id']), payload=RW_data, params={'patchFields': ','.join(patchFields), 'opType': 'replace'})
+            if result['status'] != 200:
+                raise lm_backend.LM_Session_Query_Error('Query error: ' + result['errmsg'] + ' Result: ' + str(result['status']))
+                quit(1)
+            else:
+                self.__update_data__(result['data'])
+                self.data['Update_Timestamp'] = int(time.time())
+                self.data['LMSync_Timestamp'] = self.data['Update_Timestamp']
+        else:
+            raise lm_backend.LM_Session_Query_Error('"id" is requred to update group data')
+            quit(1)
         pass
 
 if __name__ == '__main__':
