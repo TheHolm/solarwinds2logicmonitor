@@ -13,25 +13,61 @@ class Inventory_Tree:
 
         # lets init groups tables.
         c = self.db.cursor()
-        ''' key - in DB id. It is local for DB and only stored in memory.
+        c.execute('PRAGMA foreign_keys = ON')
+
+        '''  Table "groups" lists all device groups.
+         key - in DB id. It is local for DB and only stored in memory.
          id  - External group id - corresponds to on disk oor Logic monitor ids. Not same as key.
-         parentKey - in DB key of parrent group. -1 root group.
+         parentKey - in DB key of parrent group. NULL for root group.
          parentID - External parent group id.
          name TEXT - Just group name - mandatory
          fullPath TEXT - full path = path from root folder + name '''
         c.execute('''CREATE TABLE groups
                      (key INTEGER PRIMARY KEY,
                       id INT CHECK ( id > 0 or id IS NULL ),
-                      parentKey INT NOT NULL,
+                      parentKey INT REFERENCES groups(key),
                       parentId INT,
                       name TEXT ,
                       fullPath TEXT CHECK (  NOT ( fullPath IS NULL AND name IS NULL )  ) )''')
-        c.execute('CREATE INDEX IDX_id ON groups (id)')
-        c.execute('CREATE INDEX IDX_parentKey ON groups (parentKey)')
-        c.close()
+        c.execute('CREATE UNIQUE INDEX IDX_groups_id ON groups (id)')
+        c.execute('CREATE INDEX IDX_groups_parentKey ON groups (parentKey)')
+
+        '''  Table "domain" store list of IP domaind ( VRFs ), each VRF should have LM collectors group assosiated with it.
+         key - in DB id. It is local for DB and only stored in memory.
+         id  - External device id - corresponds collectors group Logic monitor ids. Not same as key.
+         name TEXT - Just VRF like name  - optional (VRF name is usualy stored there.)
+        '''
+        c.execute('''CREATE TABLE domain
+             (key INTEGER PRIMARY KEY,
+              name TEXT NOT NULL CHECK name <> "",
+              id INT CHECK ( id > 0 or id IS NULL )
+              )
+              ''')
+        c.execute('CREATE UNIQUE INDEX IDX_domain_id ON domain (id)')
+
+        ''' key - in DB id. It is local for DB and only stored in memory.
+         id  - External device id - corresponds to on disk oor Logic monitor ids. Not same as key.
+         parentKey - in DB key of parrent group. Foragin key, it must to be present in "groups" table.
+         name TEXT - Just device name - mandatory
+         URL TEXT - Examples: "snmp://1.1.1.1", "snmp://1.1.1.1:16161" and etc. HOw to monitor device. One mode per device.
+         address_scope  - id of addres_scope where IP is belongs to (think VRF). Used to set LM Collectors Group and check for dublicate IPs. '''
+        c.execute('''CREATE TABLE devices
+                     (key INTEGER PRIMARY KEY,
+                      id INT CHECK ( id > 0 or id IS NULL ),
+                      parentKey INT NOT NULL REFERENCES groups(key),
+                      name TEXT NOT NULL,
+                      URL TEXT DEFAULT "none://127.0.0.1",
+                      domain INT NOT NULL REFERENCES domain(key))
+                      ''')
+        c.execute('CREATE UNIQUE INDEX IDX_devices_id ON devices (id)')
+        c.execute('CREATE UNIQUE INDEX IDX_devices_URL_domain ON devices (URL,domain)')
         self.db.commit()
+        c.close()
+        # Actuall device/group/domain objects are going to be stored in list bellow indexed by "key" in corresponding tables.
+        # Not most effective way in terms of memory, but should be fastest to access.
         self.tree = []
-        # adding root
+        self.domains = []
+        self.devices = []
 
     def add_group(self, device_group, doNotUpdate=False):
         '''Add a group database of type device.DeviceGroup, code will try it best to find parrents '''
@@ -72,7 +108,7 @@ class Inventory_Tree:
                 quit(1)
             if len(path_list) == 1:
                 # parent is root.
-                parentKey = -1
+                parentKey = None
                 parentId = None
             else:
                 # let's try to find parent based on fullPath
@@ -109,7 +145,7 @@ class Inventory_Tree:
         else:
             # let's find parent.
             if device_group.data['parentId'] == -1:  # no need to sarch for parent it is a root.
-                parentKey = -1
+                parentKey = None
                 parentId = -1
                 g_fullPath = device_group.data['name']
             else:
