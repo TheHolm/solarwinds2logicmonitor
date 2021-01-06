@@ -168,17 +168,14 @@ class DeviceGroup(devicegroup.DeviceGroup):
         After succesful Read Only data get populated by second self.get() request
         patchFields list of field wich need to be updated. should be list or set. If it is None, all fids will be updated.
         '''
-        ### please change this !!!!! IT is copy of code from put()
         if patchFields is None:
             patchFields = set(self.data.keys())
-        print(patchFields)
         RW_data = {}
         for key in set(self.data.keys()) & set(patchFields):  # only data from patchField are get copied.
             if key not in lm_backend.DeviceGroup.__RO_attributes__ and self.data[key] is not None:
                 RW_data[key] = self.data[key]
 
         if 'id' in self.data.keys():
-            print(RW_data)
             if 'fullPath' in self.data.keys():
                 del self.data['fullPath']
             result = self.LM_Session.patch('/device/groups/' + str(self.data['id']), payload=RW_data, params={'patchFields': ','.join(patchFields), 'opType': 'replace'})
