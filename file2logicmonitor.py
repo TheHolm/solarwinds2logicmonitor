@@ -30,6 +30,16 @@ properties_list = [
      'validate': lambda i: isinstance(int(i), int) and int(i) > 0,
      'ini_to_lm': lambda i: i,
      'lm_to_ini': lambda i: i, },
+    {'INI': {'section': 'LogicMonitor', 'option': 'defaultCollectorGroupId', 'ReadOnly': False},
+     'LM': {'customProperty': False, 'key': 'defaultCollectorGroupId', 'ReadOnly': False},
+     'validate': lambda i: isinstance(int(i), int) and int(i) >= 0,
+     'ini_to_lm': lambda i: i,
+     'lm_to_ini': lambda i: i, },
+    {'INI': {'section': 'LogicMonitor', 'option': 'netflowCollectorGroupId', 'ReadOnly': False},
+     'LM': {'customProperty': True, 'key': 'netflowCollectorGroupId', 'ReadOnly': False},
+     'validate': lambda i: isinstance(int(i), int) and int(i) >= 0,
+     'ini_to_lm': lambda i: i,
+     'lm_to_ini': lambda i: i, },
     {'INI': {'section': 'node', 'option': 'CorrelationID', 'ReadOnly': False},
      'LM': {'customProperty': True, 'key': 'servicenow.company', 'ReadOnly': False},
      'validate': lambda i: re.match("\A[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\Z",i),
@@ -38,6 +48,12 @@ properties_list = [
     {'INI': {'section': 'node', 'option': 'description', 'ReadOnly': False},  # comment
      'LM': {'customProperty': False, 'key': 'description', 'ReadOnly': False},
      'validate': lambda i: type(i) is str or i is None,
+     'ini_to_lm': lambda i: i,
+     'lm_to_ini': lambda i: i, },
+    #  FIXME: Probaly better have separate lists for paramites wich are stored only in one of backends and never sync.
+    {'INI': {'section': 'node', 'option': 'subPath', 'ReadOnly': True},  # never synced between LM and Disk so 'ReadOnly' on both ends
+     'LM': {'customProperty': False, 'key': '-', 'ReadOnly': True},
+     'validate': lambda i: type(i) is str,
      'ini_to_lm': lambda i: i,
      'lm_to_ini': lambda i: i, },
     {'INI': {'section': 'SNMPv2', 'option': 'snmpv2community', 'ReadOnly': True},  # SNMP comunity, not extractable from LM
@@ -286,7 +302,7 @@ def tree_runner(sub_path, root_path, parent, offset=0):
     for entry in os.scandir(path=path):
         if entry.is_file():
             if re.match("\w.*\.ini\Z", entry.name):
-                node_handler(entry.name, sub_path, root_path, parent, 73, offset)
+                # node_handler(entry.name, sub_path, root_path, parent, 73, offset)
                 pass
             elif entry.name == '.group.ini':
                 continue
@@ -376,13 +392,6 @@ def tree_runner(sub_path, root_path, parent, offset=0):
                     else:
                         lm_extra_dict[i['name']] = None
 
-            # Very temporary. Should I just keep values on disk wich is defined in propproperties_list ?
-            RM_from_disk = ('groupType', 'defaultCollectorId', 'disableAlerting', 'InSyncWithBackend', 'fullPath', 'name')
-            for obj in RM_from_disk:
-                if obj in group_config.options('LogicMonitor'):
-                    del group_config['LogicMonitor'][obj]
-                    disk_needs_update = True
-
             # only data wich we importing for folder structure is node name, LM will be updated normal way
             if group_config['node']['name'] != entry.name:  # "name" field in .ini is out of sync.
                 disk_needs_update = True
@@ -404,12 +413,21 @@ def tree_runner(sub_path, root_path, parent, offset=0):
 
             # option set is SET of indexes refering to values in "properties_list" dictionary
             disk_set = set()
+            # Anyhing wich not defined properties_list should be removed from INI file. Lets keep data clean.
+            # We will build disk_set at same time.
             for section in group_config.sections():
+                if section not in ini_properties_list_lookup.keys():  # whole section need to be deleted
+                    del group_config[section]
+                    disk_needs_update = True
+                    continue
                 for option in group_config.options(section):
-                    try:
+                    if option in ini_properties_list_lookup[section].keys():  # i do not what to use try: here
                         disk_set.add(ini_properties_list_lookup[section][option])
-                    except KeyError:  # If element is not in ther "properties_list" we do not care about it
-                        pass
+                    else:  # If element is not in ther "properties_list" we do not care about it
+                        del group_config[section][option]
+                        disk_needs_update = True
+
+
             lm_main_set = set(map(lambda i: LM_properties_list_lookup[False][i], set(dg.data.keys()) & set(LM_properties_list_lookup[False].keys())))
             lm_extra_set = set(map(lambda i: LM_properties_list_lookup[True][i], set(lm_extra_dict.keys()) & set(LM_properties_list_lookup[True].keys())))
 
@@ -466,24 +484,23 @@ def tree_runner(sub_path, root_path, parent, offset=0):
 
             if lm_needs_update:
                 group_config['node']['LMSync_Timestamp'] = str(dg.data['LMSync_Timestamp'])
-                dg.data['customProperties'].append({'name': "InSyncWithBackend", 'value': 'Yes'})
+                dg.data['LMSync_Timestamp'] = int(time.time())
+                if "InSyncWithBackend" not in lm_extra_dict.keys():
+                    dg.data['customProperties'].append({'name': "InSyncWithBackend", 'value': 'Yes'})
                 lm_patchFields.add('customProperties')
 
             if disk_needs_update:
-                lm_needs_update = True
-                dg.data['customProperties'].append({'name': 'FSSync_Timestamp', 'value': str(int(time.time()))})
                 lm_patchFields.add('customProperties')
                 dg.data['FSSync_Timestamp'] = int(time.time())
                 group_config['node']['FSSync_Timestamp'] = str(dg.data['FSSync_Timestamp'])
 
-            if disk_needs_update:
-                # let's update data on disk.
+            if disk_needs_update or lm_needs_update:
+                # let's update data on disk. At least time stamp need to be updated.
                 with open(group_ini, 'w') as configfile:
                     group_config.write(configfile)
-                print(' '.ljust(offset), '| ', entry.name, '- dir Config updated')
-            if lm_needs_update:
+                # print(' '.ljust(offset), '| ', entry.name, '- dir Config updated')
                 dg.patch(patchFields=lm_patchFields)
-                print(' '.ljust(offset), '| ', entry.name, '- LM data updated')
+                print(' '.ljust(offset), '| ', entry.name, '- data in LM and Disk was updated')
 
             tree_runner(sub_path + ('/' if sub_path != '' else '') + entry.name, root_path, dg, offset=offset + 3)
         else:

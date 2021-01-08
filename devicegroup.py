@@ -12,13 +12,14 @@ class DeviceGroup:
     keys_to_store = ('id',
                      'parentId',
                      'customProperties',
-                     'defaultCollectorId',
+                     'defaultCollectorGroupId',
                      'description',
                      'extra',
                      'fullPath',
                      'name',
                      'disableAlerting',
                      'groupType',
+                     'subGroups',
                      )
 
     def __init__(self, id=None, fullPath="", data={}):
