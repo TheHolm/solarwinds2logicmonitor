@@ -118,7 +118,7 @@ class Test_Inventory_Tree:
         print(it, g0)
 
     def test_add_group_09(self, Inventory_Tree_Instance):
-        ''' fail tryinf to add group with same path '''
+        ''' fail trying to add group with same path '''
         it = Inventory_Tree_Instance
         groupdata = {
           "id": None,
@@ -143,6 +143,15 @@ class Test_Inventory_Tree:
         it.add_group(g0)
         assert g0.data['fullPath'] == "Users"
         print(it, g0)
+
+    def test_add_group_11(self, Inventory_Tree_Instance):
+        ''' add 2 groups without id  /'''
+        it = Inventory_Tree_Instance
+        g0 = devicegroup.DeviceGroup(data={"fullPath": "NoGroup"})
+        g1 = devicegroup.DeviceGroup(data={"fullPath": "NoGroup2"})
+        it.add_group(g0)
+        it.add_group(g1)
+        print(it, g0, g1)
 
     def test_add_group_15(self, Inventory_Tree_Instance):
         ''' fail trying to add root group with same name'''
