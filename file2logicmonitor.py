@@ -467,17 +467,18 @@ def tree_runner(sub_path, root_path, parent, offset=0):
                         group_config[properties_list[key]['INI']['section']][properties_list[key]['INI']['option']] = str(properties_list[key]['lm_to_ini'](lm_value))
                 elif key in disk_set - (lm_main_set | lm_extra_set):  # present on disk but not in LM. We will update LM regardelses of InSyncWithBackend value, as it is new values.
                     print("Key", properties_list[key]['LM']['key'], 'present only on disk, copy it to LM ', not properties_list[key]['LM']['ReadOnly'])
-                    lm_needs_update = True
-                    if properties_list[key]['LM']['customProperty']:
-                        dg.data['customProperties'].append(
-                            {
-                                'name': properties_list[key]['LM']['key'],
-                                'value': properties_list[key]['ini_to_lm'](disk_value)
-                            })
-                        lm_patchFields.add('customProperties')
-                    else:
-                        dg.data[properties_list[key]['LM']['key']] = properties_list[key]['ini_to_lm'](disk_value)
-                        lm_patchFields.add(str(properties_list[key]['LM']['key']))
+                    if not properties_list[key]['LM']['ReadOnly']:
+                        lm_needs_update = True
+                        if properties_list[key]['LM']['customProperty']:
+                            dg.data['customProperties'].append(
+                                {
+                                    'name': properties_list[key]['LM']['key'],
+                                    'value': properties_list[key]['ini_to_lm'](disk_value)
+                                })
+                            lm_patchFields.add('customProperties')
+                        else:
+                            dg.data[properties_list[key]['LM']['key']] = properties_list[key]['ini_to_lm'](disk_value)
+                            lm_patchFields.add(str(properties_list[key]['LM']['key']))
                 else:
                     print('This should not happen #1, Quiting')
                     quit(1)
