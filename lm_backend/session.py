@@ -55,6 +55,7 @@ class API_Session:
         signature = base64.b64encode(hmac.new(self.AccessKey.encode(), msg=requestVars.encode(), digestmod=hashlib.sha256).hexdigest().encode())
         auth_header = 'LMv1 ' + self.AccessId + ':' + signature.decode() + ':' + epoch
         headers = {'Content-Type': 'application/json',
+                   'X-Version': '2',
                    'Authorization': auth_header}
 
         try:
