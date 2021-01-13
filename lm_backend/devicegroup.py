@@ -104,7 +104,7 @@ class DeviceGroup(devicegroup.DeviceGroup):
             if (method == 'fullPath' and 'fullPath' in self.data) or \
                (method == 'name' and 'name' in self.data and 'parentId' in self.data):
                 try:
-                    filter = ('fullPath:' + str(self.data['fullPath'])) if (method == 'fullPath') else \
+                    filter = ('fullPath:"' + str(self.data['fullPath']) + '"') if (method == 'fullPath') else \
                         ('name:' + str(self.data['name']) + ',' + 'parentId:' + str(self.data['parentId']))
                 except TypeError:
                     # not sure is it safe. should cach situation when some od data['xx'] are None or wrong type
@@ -112,7 +112,8 @@ class DeviceGroup(devicegroup.DeviceGroup):
                 result = self.LM_Session.get('/device/groups', params={'filter': filter})
                 # print(json.dumps(result, indent=4))
                 if result['status'] != 200:
-                    raise lm_backend.LM_Session_Query_Error('Query error' + result['errmsg'])
+                    print(result)
+                    raise lm_backend.LM_Session_Query_Error('Query error: ' + result['errmsg'])
                     quit(1)
                 if result['data']['total'] > 1:
                     raise lm_backend.LM_Session_Database_Error('LM API return more than 1 result in group search "' + self.data['fullPath'] + '"')

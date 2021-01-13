@@ -27,8 +27,6 @@ class API_Session:
         # checking that cre can login to LM
         # starting session
         self.SessionId = requests.Session()
-#        self.SessionId.headers.update({'Content-Type': 'application/json'})
-#        adapter = TlsAdapter(ssl.OP_NO_TLSv1 | ssl.OP_NO_TLSv1_3)
 
         # Check is account works and have NodeMangemt Rights.
         result = self.__call_API__('GET', '/device/devices', params={'size': 1})
@@ -55,6 +53,7 @@ class API_Session:
         signature = base64.b64encode(hmac.new(self.AccessKey.encode(), msg=requestVars.encode(), digestmod=hashlib.sha256).hexdigest().encode())
         auth_header = 'LMv1 ' + self.AccessId + ':' + signature.decode() + ':' + epoch
         headers = {'Content-Type': 'application/json',
+                   'Accept': 'application/json',
                    'X-Version': '2',
                    'Authorization': auth_header}
 
@@ -63,9 +62,17 @@ class API_Session:
         except urllib3.exceptions.ReadTimeoutError as e:
             raise lm_backend.LM_Session_Database_Error('Connection timeout' + str(e))
         else:
-            self.response.raise_for_status()
+            # self.response.raise_for_status() # with APIv2 even 404 sometemes is OK.
+            pass
 
-        response = self.response.json()
+        response = dict()
+        response['data'] = self.response.json()
+        if int(self.response.status_code) != 200:  # need to check what kind of 404 is that
+            response['status'] = response['data']['errorCode']
+            response['errmsg'] = response['data']['errorMessage']
+        else:
+            response['status'] = int(self.response.status_code)
+            response['errmsg'] = 'OK'
         response['headers'] = dict(self.response.headers)
         # know that coder above is calling for truoble as Headers not always can be represnted as dict.  But LM respones seems to be does not cause any troubles.
         return(response)
