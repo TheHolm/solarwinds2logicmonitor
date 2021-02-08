@@ -33,7 +33,6 @@ class DeviceGroup(devicegroup.DeviceGroup):
         "groupStatus",
         "subGroups",
         "defaultCollectorDescription",
-        "defaultCollectorGroupId"  # for some reason you can;t set it.
     ))
 
     def __init__(self, LM_Session, id=None, fullPath=None, deviceGroup=None):
@@ -93,7 +92,6 @@ class DeviceGroup(devicegroup.DeviceGroup):
                     raise lm_backend.LM_Session_Query_Error('The hostgroup ID ' + str(self.data['id']) + ' is not found')
                     quit(1)
                 elif result['status'] not in (200, 1069):
-                    print(str(result))
                     raise lm_backend.LM_Session_Query_Error('Query error: ' + result['errmsg'])
                     quit(1)
                 else:
