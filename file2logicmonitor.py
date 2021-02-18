@@ -28,18 +28,18 @@ properties_list = [
     {'INI': {'section': 'LogicMonitor', 'option': 'parentId', 'ReadOnly': True},  # changing parent ID in folder needs special handling.
      'LM': {'customProperty': False, 'key': 'parentId', 'ReadOnly': False},
      'validate': lambda i: isinstance(int(i), int) and int(i) > 0,
-     'ini_to_lm': lambda i: i,
-     'lm_to_ini': lambda i: i, },
+     'ini_to_lm': lambda i: int(i),
+     'lm_to_ini': lambda i: str(i), },
     {'INI': {'section': 'LogicMonitor', 'option': 'defaultCollectorGroupId', 'ReadOnly': False},
-     'LM': {'customProperty': False, 'key': 'defaultCollectorGroupId', 'ReadOnly': False},
+     'LM': {'customProperty': False, 'key': 'defaultAutoBalancedCollectorGroupId', 'ReadOnly': False},
      'validate': lambda i: isinstance(int(i), int) and int(i) >= 0,
-     'ini_to_lm': lambda i: i,
-     'lm_to_ini': lambda i: i, },
+     'ini_to_lm': lambda i: int(i),
+     'lm_to_ini': lambda i: str(i), },
     {'INI': {'section': 'LogicMonitor', 'option': 'netflowCollectorGroupId', 'ReadOnly': False},
      'LM': {'customProperty': True, 'key': 'netflowCollectorGroupId', 'ReadOnly': False},
      'validate': lambda i: isinstance(int(i), int) and int(i) >= 0,
-     'ini_to_lm': lambda i: i,
-     'lm_to_ini': lambda i: i, },
+     'ini_to_lm': lambda i: int(i),
+     'lm_to_ini': lambda i: str(i), },
     {'INI': {'section': 'node', 'option': 'CorrelationID', 'ReadOnly': False},
      'LM': {'customProperty': True, 'key': 'servicenow.company', 'ReadOnly': False},
      'validate': lambda i: re.match("\A[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\Z",i),
@@ -50,9 +50,8 @@ properties_list = [
      'validate': lambda i: type(i) is str or i is None,
      'ini_to_lm': lambda i: i,
      'lm_to_ini': lambda i: i, },
-    #  FIXME: Probaly better have separate lists for paramites wich are stored only in one of backends and never sync.
     {'INI': {'section': 'node', 'option': 'subPath', 'ReadOnly': True},  # never synced between LM and Disk so 'ReadOnly' on both ends
-     'LM': {'customProperty': False, 'key': '-', 'ReadOnly': True},
+     'LM': {'customProperty': False, 'key': 'subPath', 'ReadOnly': True},
      'validate': lambda i: type(i) is str,
      'ini_to_lm': lambda i: i,
      'lm_to_ini': lambda i: i, },
@@ -302,7 +301,7 @@ def tree_runner(sub_path, root_path, parent, offset=0):
     for entry in os.scandir(path=path):
         if entry.is_file():
             if re.match("\w.*\.ini\Z", entry.name):
-                # node_handler(entry.name, sub_path, root_path, parent, 73, offset)
+                node_handler(entry.name, sub_path, root_path, parent, 73, offset)
                 pass
             elif entry.name == '.group.ini':
                 continue
@@ -431,7 +430,9 @@ def tree_runner(sub_path, root_path, parent, offset=0):
             lm_main_set = set(map(lambda i: LM_properties_list_lookup[False][i], set(dg.data.keys()) & set(LM_properties_list_lookup[False].keys())))
             lm_extra_set = set(map(lambda i: LM_properties_list_lookup[True][i], set(lm_extra_dict.keys()) & set(LM_properties_list_lookup[True].keys())))
 
-            for key in disk_set | lm_main_set | lm_extra_set:  # element present in both sets.
+            for key in disk_set | lm_main_set | lm_extra_set:  # element present any of sets.
+                if properties_list[key]['INI']['ReadOnly'] and properties_list[key]['LM']['ReadOnly']:  # if Attribute Readonly in LM and Disk then no need to copy,
+                    continue
                 is_customProperty = key in lm_extra_set
                 if key in lm_main_set | lm_extra_set:
                     lm_value = lm_extra_dict[properties_list[key]['LM']['key']] \
@@ -448,11 +449,18 @@ def tree_runner(sub_path, root_path, parent, offset=0):
                                     dg.data[properties_list[key]['LM']['key']] = properties_list[key]['ini_to_lm'](disk_value)
                                     lm_patchFields.add(str(properties_list[key]['LM']['key']))
                                 else:
-                                    dg.data['customProperties'].append(
-                                        {
-                                            'name': properties_list[key]['LM']['key'],
-                                            'value': properties_list[key]['ini_to_lm'](disk_value)
-                                        })
+                                    keyFound = False
+                                    for CustomProperty in dg.data['customProperties']:
+                                        if CustomProperty['name'] == properties_list[key]['LM']['key']:  # same key already exists
+                                            CustomProperty['value'] = properties_list[key]['ini_to_lm'](disk_value)
+                                            keyFound = True
+                                            break  # Let's hope that there is no dublikate keys already.
+                                    if not keyFound:
+                                        dg.data['customProperties'].append(
+                                            {
+                                                'name': properties_list[key]['LM']['key'],
+                                                'value': properties_list[key]['ini_to_lm'](disk_value)
+                                            })
                                     lm_patchFields.add('customProperties')
                         else:  # data is copied to disk from LM
                             print("Key", properties_list[key]['LM']['key'], 'present in both lists, copy it to Disk', not properties_list[key]['INI']['ReadOnly'])
