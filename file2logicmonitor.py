@@ -251,20 +251,24 @@ def node_handler(entry_name, sub_path, root_path, parent, collectorId, offset):
 
         if "SNMPv3" in node_config.sections():
             print(' '.ljust(offset), '| ', entry_name, '- file', node_config['node']['ipv4address'], "SNMPv3")
-            payload['customProperties'] = [
-                    {'name': 'snmp.version', 'value': 'v3'},
-                    {'name': 'snmp.security', 'value': node_config['SNMPv3']['snmpv3username']},
-                    {'name': 'snmp.auth', 'value': ini_SNMPv3_auth_method_mapping[node_config['SNMPv3']['snmpv3authenticationmethod']]},  # waiting got KeyError here.
-                    {'name': 'snmp.authToken', 'value': node_config['SNMPv3']['snmpv3authenticationkey']},
-                    {'name': 'snmp.priv', 'value': ini_SNMPv3_encryption_method_mapping[node_config['SNMPv3']['snmpv3privacymethod']]},  # waiting got KeyError here.
-                    {'name': 'snmp.privToken', 'value': node_config['SNMPv3']['snmpv3privacykey']},
-                    ]
+            payload['customProperties'] = [{'name': 'snmp.version', 'value': 'v3'}]
+            # FIXME no bloody static list. Use same approach as for group attributes.
+            if node_config.has_option('SNMPv3', 'snmpv3username'):
+                payload['customProperties'].append({'name': 'snmp.security', 'value': node_config['SNMPv3']['snmpv3username']})
+            if node_config.has_option('SNMPv3', 'snmpv3authenticationmethod'):
+                payload['customProperties'].append({'name': 'snmp.auth', 'value': ini_SNMPv3_auth_method_mapping[node_config['SNMPv3']['snmpv3authenticationmethod']]})
+            if node_config.has_option('SNMPv3', 'snmpv3authenticationkey'):
+                payload['customProperties'].append({'name': 'snmp.authToken', 'value': node_config['SNMPv3']['snmpv3authenticationkey']})
+            if node_config.has_option('SNMPv3', 'snmpv3privacymethod'):
+                payload['customProperties'].append({'name': 'snmp.priv', 'value': ini_SNMPv3_encryption_method_mapping[node_config['SNMPv3']['snmpv3privacymethod']]})
+            if node_config.has_option('SNMPv3', 'snmpv3privacykey'):
+                payload['customProperties'].append(
+                    {'name': 'snmp.privToken', 'value': node_config['SNMPv3']['snmpv3privacykey']})
         elif "SNMPv2" in node_config.sections():
             print(' '.ljust(offset), '| ', entry_name, '- file', node_config['node']['ipv4address'], "SNMPv2")
-            payload['customProperties'] = [
-                    {'name': 'snmp.version', 'value': 'v2c'},
-                    {'name': 'snmp.community', 'value': node_config['SNMPv2']['snmp.community']},
-                    ]
+            payload['customProperties'] = [{'name': 'snmp.version', 'value': 'v2c'}]
+            if node_config.has_option('SNMPv2', 'snmp.community'):
+                payload['customProperties'].append({'name': 'snmp.community', 'value': node_config['SNMPv2']['snmp.community']})
         else:  # we will just use ping
             print(' '.ljust(offset), '| ', entry_name, '- file', node_config['node']['ipv4address'], "Ping")
             payload['customProperties'] = [{'name': 'snmp.version', 'value': ''}]
