@@ -1,5 +1,6 @@
 import json
 import configparser
+import argparse
 import os
 import re
 import time
@@ -529,6 +530,13 @@ LM_SNMPv3_auth_method_mapping = dict_invert(ini_SNMPv3_auth_method_mapping)
 LM_SNMPv3_encryption_method_mapping = dict_invert(ini_SNMPv3_encryption_method_mapping)
 properties_list_lookup_calculation()
 
+# if subpath provided in command line start there id nothing provided just run from root folder.
+
+parser = argparse.ArgumentParser(description='Import Nodes to Logic MOnitor.')
+parser.add_argument('subpath', nargs='?', default="", help='path to folder to process relative to root folder from config.ini')
+args = vars(parser.parse_args())
+start_at = args['subpath']
+start_at = ("/" + start_at) if start_at != "" else ""
 # calculate_LM_ini_customProperties()
 
 config = configparser.ConfigParser(interpolation=None)
@@ -539,7 +547,7 @@ api_instance = lm_backend.API_Session(json.loads(config['LogicMonitor']['access_
                                       json.loads(config['LogicMonitor']['access_key']),
                                       json.loads(config['LogicMonitor']['company']))
 groupdata = {
-  "fullPath": json.loads(config['LogicMonitor']['RootPath']),
+  "fullPath": json.loads(config['LogicMonitor']['RootPath']) + start_at
 }
 dg = lm_backend.DeviceGroup(api_instance, deviceGroup=devicegroup.DeviceGroup(data=groupdata))
 dg.get(raiseWhenNotFound=False)
@@ -553,6 +561,6 @@ else:
 # update_dynamic_groups_list(set((12, 1183, 2077, 5, 1185)))
 # print(dynamic_group_Ids)
 
-tree_runner('', str(config['FileSystemBackend']['rootpath']).replace('"', ''), dg)
+tree_runner('', str(config['FileSystemBackend']['rootpath']).replace('"', '') + start_at, dg)
 
 quit()
