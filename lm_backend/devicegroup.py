@@ -103,7 +103,7 @@ class DeviceGroup(devicegroup.DeviceGroup):
                (method == 'name' and 'name' in self.data and 'parentId' in self.data):
                 try:
                     filter = ('fullPath:"' + str(self.data['fullPath']) + '"') if (method == 'fullPath') else \
-                        ('name:' + str(self.data['name']) + ',' + 'parentId:' + str(self.data['parentId']))
+                        ('name:"' + str(self.data['name']) + '",' + 'parentId:' + str(self.data['parentId']))
                 except TypeError:
                     # not sure is it safe. should cach situation when some od data['xx'] are None or wrong type
                     continue
