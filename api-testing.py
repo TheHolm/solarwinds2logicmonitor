@@ -24,9 +24,9 @@ payload = {}
 payload['customProperties'] = []
 result = None
 
-result = api_instance.get('/device/groups/1880' + '', params={'v': 2})
+result = api_instance.get('/device/groups/2381' + '')
 # result = api_instance.get('/device/devices/3669' + '')
-
+print('-' * 10)
 pp.pprint(result)
 
 quit()

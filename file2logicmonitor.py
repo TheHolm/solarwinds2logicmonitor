@@ -36,6 +36,11 @@ properties_list = [
      'validate': lambda i: isinstance(int(i), int) and int(i) >= 0,
      'ini_to_lm': lambda i: int(i),
      'lm_to_ini': lambda i: str(i), },
+    {'INI': {'section': 'LogicMonitor', 'option': 'defaultCollectorGroupId', 'ReadOnly': True},  # repetition of previos one as defaultCollectorGroupId controls two properies in LM - defaultAutoBalancedCollectorGroupId and defaultCollectorGroupId
+     'LM': {'customProperty': False, 'key': 'defaultCollectorGroupId', 'ReadOnly': False},
+     'validate': lambda i: isinstance(int(i), int) and int(i) >= 0,
+     'ini_to_lm': lambda i: int(i),
+     'lm_to_ini': lambda i: str(i), },
     {'INI': {'section': 'LogicMonitor', 'option': 'netflowCollectorGroupId', 'ReadOnly': False},
      'LM': {'customProperty': True, 'key': 'netflowCollectorGroupId', 'ReadOnly': False},
      'validate': lambda i: isinstance(int(i), int) and int(i) >= 0,
