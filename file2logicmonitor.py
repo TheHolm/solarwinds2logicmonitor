@@ -283,8 +283,9 @@ def node_handler(entry_name, sub_path, root_path, parent, collectorId, offset):
         result = api_instance.post('/device/devices', payload=payload)
         # pp.pprint(result)
         if result['status'] != 200:
-            print('It was an erorr', pp.pformat(result))
-            quit(1)
+            print('It was an erorr while adding:', payload['displayName'], "\n", pp.pformat(result))
+            # quit(1)
+            return()
 
         print(' '.ljust(offset), '| ', entry_name, '- created in LM')
         # updating disk.
