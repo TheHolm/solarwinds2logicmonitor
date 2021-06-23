@@ -514,7 +514,8 @@ def tree_runner(sub_path, root_path, parent, offset=0):
                 dg.data['FSSync_Timestamp'] = int(time.time())
                 group_config['node']['FSSync_Timestamp'] = str(dg.data['FSSync_Timestamp'])
 
-            if disk_needs_update or lm_needs_update:
+            # if disk_needs_update or lm_needs_update:  # temporary removed to prevent unnessary updates
+            if disk_needs_update:
                 # let's update data on disk. At least time stamp need to be updated.
                 with open(group_ini, 'w') as configfile:
                     group_config.write(configfile)
