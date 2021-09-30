@@ -13,9 +13,11 @@ import devicegroup
 import pprint
 
 # way to map data in INI file to LM attrebutes. ('snmp.version' still does not translaed well)
-ini_properties_list_lookup = dict()
-LM_properties_list_lookup = dict()
-properties_list = [
+ini_properties_list_groups_lookup = dict()
+ini_properties_list_nodes_lookup = dict()
+LM_properties_list_groups_lookup = dict()
+LM_properties_list_nodes_lookup = dict()
+properties_list_shared = [
     {'INI': {'section': 'node', 'option': 'name', 'ReadOnly': False},
      'LM': {'customProperty': False, 'key': 'name', 'ReadOnly': False},
      'validate': lambda i: type(i) is str and i != '',
@@ -93,6 +95,14 @@ properties_list = [
      'lm_to_ini': lambda i: ''},
 ]
 
+properties_list_groups = properties_list_shared + [
+
+]
+
+properties_list_nodes = properties_list_shared + [
+
+]
+
 ini_SNMPv3_auth_method_mapping = {
     'SHA1': 'SHA',
     'MD5': 'MD5',
@@ -122,13 +132,22 @@ def dict_invert(input):  # iverting keys.
 
 
 def properties_list_lookup_calculation():
-    for index, value in enumerate(properties_list):  # can use try, but to not like it here,
-        if value['INI']['section'] not in ini_properties_list_lookup.keys():
-            ini_properties_list_lookup[value['INI']['section']] = {}
-        ini_properties_list_lookup[properties_list[index]['INI']['section']][properties_list[index]['INI']['option']] = index
-        if value['LM']['customProperty'] not in LM_properties_list_lookup.keys():
-            LM_properties_list_lookup[value['LM']['customProperty']] = {}
-        LM_properties_list_lookup[value['LM']['customProperty']][value['LM']['key']] = index
+    '''Calculating invers dict to speed up lookups'''
+    for index, value in enumerate(properties_list_nodes):  # can use try, but to not like it here,
+        if value['INI']['section'] not in ini_properties_list_nodes_lookup.keys():
+            ini_properties_list_nodes_lookup[value['INI']['section']] = {}
+        ini_properties_list_nodes_lookup[properties_list_nodes[index]['INI']['section']][properties_list_nodes[index]['INI']['option']] = index
+        if value['LM']['customProperty'] not in LM_properties_list_nodes_lookup.keys():
+            LM_properties_list_nodes_lookup[value['LM']['customProperty']] = {}
+        LM_properties_list_nodes_lookup[value['LM']['customProperty']][value['LM']['key']] = index
+
+    for index, value in enumerate(properties_list_groups):  # can use try, but to not like it here,
+        if value['INI']['section'] not in ini_properties_list_groups_lookup.keys():
+            ini_properties_list_groups_lookup[value['INI']['section']] = {}
+        ini_properties_list_groups_lookup[properties_list_groups[index]['INI']['section']][properties_list_groups[index]['INI']['option']] = index
+        if value['LM']['customProperty'] not in LM_properties_list_groups_lookup.keys():
+            LM_properties_list_groups_lookup[value['LM']['customProperty']] = {}
+        LM_properties_list_groups_lookup[value['LM']['customProperty']][value['LM']['key']] = index
 
 
 def update_dynamic_groups_list(list):
@@ -177,6 +196,16 @@ def node_handler(entry_name, sub_path, root_path, parent, collectorId, offset):
                     InSyncWithBackend = True
                     break
 
+            # IP address changed
+            if result['data']['name'] != str(node_config['node']['ipv4address']):  # Node was renamed
+                if InSyncWithBackend:  # file backend is leading
+                    payload['name'] = str(node_config['node']['ipv4address'])
+                    lm_patchFields.add('name')
+                    lm_needs_update = True
+                else:  # updating disk
+                    node_config['node']['ipv4address'] = str(result['data']['name'])
+                    disk_needs_update = True
+
             # device renamed
             if result['data']['displayName'] != entry_name[:-4]:  # Node was renamed
                 if InSyncWithBackend:  # file backend is leading
@@ -202,6 +231,7 @@ def node_handler(entry_name, sub_path, root_path, parent, collectorId, offset):
                     lm_patchFields.add('hostGroupIds')
                     node_config['LogicMonitor']['hostGroupIds'] = str(parent.data['id'])
                     disk_needs_update = True
+                    lm_needs_update = True
                 else:
                     print("Node have moved in LM, can't handle it yet (but itis in the plans). Quiting")
                     quit(1)
@@ -227,6 +257,7 @@ def node_handler(entry_name, sub_path, root_path, parent, collectorId, offset):
                 disk_needs_update = True
 
             if lm_needs_update:
+                # pp.pprint(payload)  # Debug
                 payload['customProperties'].append({'name': "InSyncWithBackend", 'value': 'Yes'})
                 result = api_instance.patch('/device/devices/' + str(node_config['LogicMonitor']['id']),
                                             payload=payload,
@@ -236,7 +267,7 @@ def node_handler(entry_name, sub_path, root_path, parent, collectorId, offset):
                     print('It was an error while updating node data', pp.pformat(result))
                     quit(1)
                 print(' '.ljust(offset), '| ', entry_name, '- found, LM config updated. Fields: ', ','.join(lm_patchFields))
-                pp.pprint(payload)
+                # pp.pprint(payload) # Debug
             else:
                 print(' '.ljust(offset), '| ', entry_name, '- found, nothing need to be done in LM')
 
@@ -312,6 +343,7 @@ def tree_runner(sub_path, root_path, parent, offset=0):
     for entry in os.scandir(path=path):
         if entry.is_file():
             if re.match("\w.*\.ini\Z", entry.name):
+                # if entry.name == 'RAG - RAG_CON157_harbourside_nbn.ini':  # Debug
                 node_handler(entry.name, sub_path, root_path, parent, 73, offset)
                 pass
             elif entry.name == '.group.ini':
@@ -397,7 +429,7 @@ def tree_runner(sub_path, root_path, parent, offset=0):
                     print("Dublicate key values in LM customProperties. Have no idea what to do with it. Quiting\n", dg.data)
                     quit(1)
                 else:
-                    if not re.match("^\**$", i['value']): #this one of "password" type parameters for wich LM replaces values with *****
+                    if not re.match("^\**$", i['value']):  # this one of "password" type parameters for wich LM replaces values with *****
                         lm_extra_dict[i['name']] = i['value']
                     else:
                         lm_extra_dict[i['name']] = None
@@ -411,7 +443,7 @@ def tree_runner(sub_path, root_path, parent, offset=0):
                 if str(parent.data['id']) != group_config['LogicMonitor']['parentId']:  # group was moved on disk.
                     disk_needs_update = True
                     group_config['LogicMonitor']['parentId'] = str(parent.data['id'])
-                if str(dg.data['parentId']) != str(parent.data['id']) and not InSyncWithBackend: # groupe was moved in LM
+                if str(dg.data['parentId']) != str(parent.data['id']) and not InSyncWithBackend:  # groupe was moved in LM
                     print('Cant handle group reloaction in LM yet. Quiting')
                     quit(1)
                 else:
@@ -426,78 +458,77 @@ def tree_runner(sub_path, root_path, parent, offset=0):
             # Anyhing wich not defined properties_list should be removed from INI file. Lets keep data clean.
             # We will build disk_set at same time.
             for section in group_config.sections():
-                if section not in ini_properties_list_lookup.keys():  # whole section need to be deleted
+                if section not in ini_properties_list_groups_lookup.keys():  # whole section need to be deleted
                     del group_config[section]
                     disk_needs_update = True
                     continue
                 for option in group_config.options(section):
-                    if option in ini_properties_list_lookup[section].keys():  # i do not what to use try: here
-                        disk_set.add(ini_properties_list_lookup[section][option])
+                    if option in ini_properties_list_groups_lookup[section].keys():  # i do not what to use try: here
+                        disk_set.add(ini_properties_list_groups_lookup[section][option])
                     else:  # If element is not in ther "properties_list" we do not care about it
                         del group_config[section][option]
                         disk_needs_update = True
 
-
-            lm_main_set = set(map(lambda i: LM_properties_list_lookup[False][i], set(dg.data.keys()) & set(LM_properties_list_lookup[False].keys())))
-            lm_extra_set = set(map(lambda i: LM_properties_list_lookup[True][i], set(lm_extra_dict.keys()) & set(LM_properties_list_lookup[True].keys())))
+            lm_main_set = set(map(lambda i: LM_properties_list_groups_lookup[False][i], set(dg.data.keys()) & set(LM_properties_list_groups_lookup[False].keys())))
+            lm_extra_set = set(map(lambda i: LM_properties_list_groups_lookup[True][i], set(lm_extra_dict.keys()) & set(LM_properties_list_groups_lookup[True].keys())))
 
             for key in disk_set | lm_main_set | lm_extra_set:  # element present any of sets.
-                if properties_list[key]['INI']['ReadOnly'] and properties_list[key]['LM']['ReadOnly']:  # if Attribute Readonly in LM and Disk then no need to copy,
+                if properties_list_groups[key]['INI']['ReadOnly'] and properties_list_groups[key]['LM']['ReadOnly']:  # if Attribute Readonly in LM and Disk then no need to copy,
                     continue
                 is_customProperty = key in lm_extra_set
                 if key in lm_main_set | lm_extra_set:
-                    lm_value = lm_extra_dict[properties_list[key]['LM']['key']] \
-                        if is_customProperty else dg.data[properties_list[key]['LM']['key']]
+                    lm_value = lm_extra_dict[properties_list_groups[key]['LM']['key']] \
+                        if is_customProperty else dg.data[properties_list_groups[key]['LM']['key']]
                 if key in disk_set:
-                    disk_value = group_config[properties_list[key]['INI']['section']][properties_list[key]['INI']['option']]
+                    disk_value = group_config[properties_list_groups[key]['INI']['section']][properties_list_groups[key]['INI']['option']]
                 if key in (disk_set & (lm_main_set | lm_extra_set)):  # element present in both sets.
                     if str(lm_value) != str(disk_value):  # FIXME: actually need to translate to some intermideate from to be comparable.
                         if InSyncWithBackend:  # data is copied to LM from disk.
-                            print("Key", properties_list[key]['LM']['key'], 'present in both lists, copy it to LM ', not properties_list[key]['LM']['ReadOnly'])
-                            if not properties_list[key]['LM']['ReadOnly']:
+                            print("Key", properties_list_groups[key]['LM']['key'], 'present in both lists. Copy it to LM ?', not properties_list_groups[key]['LM']['ReadOnly'])
+                            if not properties_list_groups[key]['LM']['ReadOnly']:
                                 lm_needs_update = True
                                 if not is_customProperty:
-                                    dg.data[properties_list[key]['LM']['key']] = properties_list[key]['ini_to_lm'](disk_value)
-                                    lm_patchFields.add(str(properties_list[key]['LM']['key']))
+                                    dg.data[properties_list_groups[key]['LM']['key']] = properties_list_groups[key]['ini_to_lm'](disk_value)
+                                    lm_patchFields.add(str(properties_list_groups[key]['LM']['key']))
                                 else:
                                     keyFound = False
                                     for CustomProperty in dg.data['customProperties']:
-                                        if CustomProperty['name'] == properties_list[key]['LM']['key']:  # same key already exists
-                                            CustomProperty['value'] = properties_list[key]['ini_to_lm'](disk_value)
+                                        if CustomProperty['name'] == properties_list_groups[key]['LM']['key']:  # same key already exists
+                                            CustomProperty['value'] = properties_list_groups[key]['ini_to_lm'](disk_value)
                                             keyFound = True
                                             break  # Let's hope that there is no dublikate keys already.
                                     if not keyFound:
                                         dg.data['customProperties'].append(
                                             {
-                                                'name': properties_list[key]['LM']['key'],
-                                                'value': properties_list[key]['ini_to_lm'](disk_value)
+                                                'name': properties_list_groups[key]['LM']['key'],
+                                                'value': properties_list_groups[key]['ini_to_lm'](disk_value)
                                             })
                                     lm_patchFields.add('customProperties')
                         else:  # data is copied to disk from LM
-                            print("Key", properties_list[key]['LM']['key'], 'present in both lists, copy it to Disk', not properties_list[key]['INI']['ReadOnly'])
-                            lm_needs_update = True # just to set "InSyncWithBackend" in LM
-                            if not properties_list[key]['INI']['ReadOnly']:
+                            print("Key", properties_list_groups[key]['LM']['key'], 'present in both lists. Copy it to Disk ?', not properties_list_groups[key]['INI']['ReadOnly'])
+                            lm_needs_update = True  # just to set "InSyncWithBackend" in LM
+                            if not properties_list_groups[key]['INI']['ReadOnly']:
                                 disk_needs_update = True
-                                group_config[properties_list[key]['INI']['section']][properties_list[key]['INI']['option']] = str(properties_list[key]['lm_to_ini'](lm_value))
+                                group_config[properties_list_groups[key]['INI']['section']][properties_list_groups[key]['INI']['option']] = str(properties_list_groups[key]['lm_to_ini'](lm_value))
                 elif key in ((lm_main_set | lm_extra_set)):  # present in LM but not on disk
-                    print("Key", properties_list[key]['LM']['key'], 'not present on disk, copy it from LM', not properties_list[key]['INI']['ReadOnly'])
-                    if not properties_list[key]['INI']['ReadOnly']:
+                    print("Key", properties_list_groups[key]['LM']['key'], 'not present on disk. Copy it from LM ?', not properties_list_groups[key]['INI']['ReadOnly'])
+                    if not properties_list_groups[key]['INI']['ReadOnly']:
                         disk_needs_update = True
-                        group_config[properties_list[key]['INI']['section']][properties_list[key]['INI']['option']] = str(properties_list[key]['lm_to_ini'](lm_value))
+                        group_config[properties_list_groups[key]['INI']['section']][properties_list_groups[key]['INI']['option']] = str(properties_list_groups[key]['lm_to_ini'](lm_value))
                 elif key in disk_set - (lm_main_set | lm_extra_set):  # present on disk but not in LM. We will update LM regardelses of InSyncWithBackend value, as it is new values.
-                    print("Key", properties_list[key]['LM']['key'], 'present only on disk, copy it to LM ', not properties_list[key]['LM']['ReadOnly'])
-                    if not properties_list[key]['LM']['ReadOnly']:
+                    print("Key", properties_list_groups[key]['LM']['key'], 'present only on disk. Copy it to LM ?', not properties_list_groups[key]['LM']['ReadOnly'])
+                    if not properties_list_groups[key]['LM']['ReadOnly']:
                         lm_needs_update = True
-                        if properties_list[key]['LM']['customProperty']:
+                        if properties_list_groups[key]['LM']['customProperty']:
                             dg.data['customProperties'].append(
                                 {
-                                    'name': properties_list[key]['LM']['key'],
-                                    'value': properties_list[key]['ini_to_lm'](disk_value)
+                                    'name': properties_list_groups[key]['LM']['key'],
+                                    'value': properties_list_groups[key]['ini_to_lm'](disk_value)
                                 })
                             lm_patchFields.add('customProperties')
                         else:
-                            dg.data[properties_list[key]['LM']['key']] = properties_list[key]['ini_to_lm'](disk_value)
-                            lm_patchFields.add(str(properties_list[key]['LM']['key']))
+                            dg.data[properties_list_groups[key]['LM']['key']] = properties_list_groups[key]['ini_to_lm'](disk_value)
+                            lm_patchFields.add(str(properties_list_groups[key]['LM']['key']))
                 else:
                     print('This should not happen #1, Quiting')
                     quit(1)
