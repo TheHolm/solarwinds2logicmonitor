@@ -59,6 +59,8 @@ class API_Session:
                    'Accept': 'application/json',
                    'X-Version': '2',
                    'Authorization': auth_header}
+
+        # FIXME: Need add check to fail if sitting in rate limited state for to many round.
         rate_limited = True
         try:
             while rate_limited:
