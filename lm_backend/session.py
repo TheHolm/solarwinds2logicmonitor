@@ -8,7 +8,10 @@ import hmac
 
 import json
 
+from time import sleep
+
 import lm_backend
+
 
 class API_Session:
 
@@ -56,9 +59,14 @@ class API_Session:
                    'Accept': 'application/json',
                    'X-Version': '2',
                    'Authorization': auth_header}
-
+        rate_limited = True
         try:
-            self.response = self.SessionId.request(httpMethod, self.baseURL+resourcePath, params=params, data=payload, headers=headers, timeout=session_timeout)
+            while rate_limited:
+                self.response = self.SessionId.request(httpMethod, self.baseURL+resourcePath, params=params, data=payload, headers=headers, timeout=session_timeout)
+                if (int(self.response.status_code) == 429):
+                    sleep(1)
+                else:
+                    rate_limited = False
         except urllib3.exceptions.ReadTimeoutError as e:
             raise lm_backend.LM_Session_Database_Error('Connection timeout' + str(e))
         else:
