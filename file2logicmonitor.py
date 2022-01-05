@@ -353,6 +353,11 @@ def tree_runner(sub_path, root_path, parent, offset=0):
         elif entry.is_dir():
             if re.match("\A\..*\Z", entry.name): # we do not want to desent to .git folders.
                 continue
+
+            if re.match("\A.*_Staging_.*\Z", entry.name): # we do not want to desent to _staging_
+                continue
+
+
             group_ini = entry.path + '/.group.ini'
             group_config = configparser.RawConfigParser(interpolation=None)
             group_config.optionxform = lambda option: option  # case sentitive options
