@@ -50,7 +50,7 @@ properties_list_shared = [
      'lm_to_ini': lambda i: str(i), },
     {'INI': {'section': 'node', 'option': 'CorrelationID', 'ReadOnly': False},
      'LM': {'customProperty': True, 'key': 'servicenow.company', 'ReadOnly': False},
-     'validate': lambda i: re.match("\A[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\Z",i),
+     'validate': lambda i: re.match("\A[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\Z", i),
      'ini_to_lm': lambda i: i,
      'lm_to_ini': lambda i: i, },
     {'INI': {'section': 'node', 'option': 'description', 'ReadOnly': False},  # comment
@@ -163,7 +163,6 @@ def update_dynamic_groups_list(list):
             print('New dynamic group found:', result['data']['fullPath'])
 
 
-
 def node_handler(entry_name, sub_path, root_path, parent, collectorId, offset):
     path = root_path + '/' + sub_path + '/' + entry_name
 
@@ -262,7 +261,7 @@ def node_handler(entry_name, sub_path, root_path, parent, collectorId, offset):
                 result = api_instance.patch('/device/devices/' + str(node_config['LogicMonitor']['id']),
                                             payload=payload,
                                             params={'patchFields': ','.join(lm_patchFields | set(('customProperties',))),
-                                            'opType': 'replace'})
+                                                    'opType': 'replace'})
                 if result['status'] != 200:
                     print('It was an error while updating node data', pp.pformat(result))
                     quit(1)
@@ -330,7 +329,6 @@ def node_handler(entry_name, sub_path, root_path, parent, collectorId, offset):
         disk_needs_update = True
         lm_needs_update = False
 
-
     if disk_needs_update:
         # let's update data on disk.
         with open(path, 'w') as configfile:
@@ -351,12 +349,11 @@ def tree_runner(sub_path, root_path, parent, offset=0):
             else:
                 continue
         elif entry.is_dir():
-            if re.match("\A\..*\Z", entry.name): # we do not want to desent to .git folders.
+            if re.match("\A\..*\Z", entry.name):  # we do not want to desent to .git folders.
                 continue
 
-            if re.match("\A.*_Staging_.*\Z", entry.name): # we do not want to desent to _staging_
-                continue
-
+            # if re.match("\A.*_Staging_.*\Z", entry.name):  # we do not want to desent to _staging_
+            #    continue
 
             group_ini = entry.path + '/.group.ini'
             group_config = configparser.RawConfigParser(interpolation=None)
