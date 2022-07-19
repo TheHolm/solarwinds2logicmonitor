@@ -1,5 +1,9 @@
 # solarwinds2logicmonitor
 Simple tool to move nodes from Solarwinds to LogicMonitor
+
+# Archived 
+(19/07/2022) Sorry folks, but this project is archived now.  Now new development is expected any time soon. 
+
 ## File tree structure
 TBA
 
